@@ -726,9 +726,9 @@ func resourceOrchestratedVirtualMachineScaleSetCreate(d *pluginsdk.ResourceData,
 		}
 	}
 
-	if v, ok := d.GetOk("encryption_at_host_enabled"); ok {
+	if !pluginsdk.IsExplicitlyNullInConfig(d, "encryption_at_host_enabled") {
 		virtualMachineProfile.SecurityProfile = &virtualmachinescalesets.SecurityProfile{
-			EncryptionAtHost: pointer.To(v.(bool)),
+			EncryptionAtHost: pointer.To(d.Get("encryption_at_host_enabled").(bool)),
 		}
 	}
 
@@ -787,6 +787,11 @@ func resourceOrchestratedVirtualMachineScaleSetCreate(d *pluginsdk.ResourceData,
 		}
 
 		props.Properties.VirtualMachineProfile = &virtualMachineProfile
+	} else if virtualMachineProfile.SecurityProfile != nil {
+		// In legacy mode (no sku_name), still include SecurityProfile if encryption_at_host_enabled is explicitly set
+		props.Properties.VirtualMachineProfile = &virtualmachinescalesets.VirtualMachineScaleSetVMProfile{
+			SecurityProfile: virtualMachineProfile.SecurityProfile,
+		}
 	}
 
 	log.Printf("[DEBUG] Creating Orchestrated %s.", id)
@@ -1381,6 +1386,7 @@ func resourceOrchestratedVirtualMachineScaleSetRead(d *pluginsdk.ResourceData, m
 			extensionOperationsEnabled := true
 			// if `VirtualMachineProfile` is nil, `UpgradeMode` will not exist in the response
 			upgradeMode := string(virtualmachinescalesets.UpgradeModeManual)
+			d.Set("encryption_at_host_enabled", false)
 			if profile := props.VirtualMachineProfile; profile != nil {
 				if err := d.Set("boot_diagnostics", flattenBootDiagnosticsVMSS(profile.DiagnosticsProfile)); err != nil {
 					return fmt.Errorf("setting `boot_diagnostics`: %w", err)

@@ -147,6 +147,11 @@ func resourceAppServicePlan() *pluginsdk.Resource {
 				Optional: true,
 			},
 
+			"async_scale_enabled": {
+				Type:     pluginsdk.TypeBool,
+				Optional: true,
+			},
+
 			"tags": commonschema.Tags(),
 		},
 	}
@@ -197,9 +202,10 @@ func resourceAppServicePlanCreateUpdate(d *pluginsdk.ResourceData, meta interfac
 		AppServicePlanProperties: properties,
 	}
 
-	if v := d.Get("app_service_environment_id").(string); v != "" {
+	appServiceEnvironmentId := d.Get("app_service_environment_id").(string)
+	if appServiceEnvironmentId != "" {
 		appServicePlan.HostingEnvironmentProfile = &web.HostingEnvironmentProfile{
-			ID: pointer.To(v),
+			ID: pointer.To(appServiceEnvironmentId),
 		}
 	}
 
@@ -216,12 +222,21 @@ func resourceAppServicePlanCreateUpdate(d *pluginsdk.ResourceData, meta interfac
 		return fmt.Errorf("`reserved` has to be set to false when kind is set to `Windows`")
 	}
 
+	asyncScaleEnabled := d.Get("async_scale_enabled").(bool)
+	if appServiceEnvironmentId != "" && asyncScaleEnabled {
+		return fmt.Errorf("async_scale_enabled is not configurable for App Service Plans created in App Service Environments as they scale asynchronously by default")
+	}
+
 	if v := d.Get("maximum_elastic_worker_count").(int); v > 0 {
 		appServicePlan.MaximumElasticWorkerCount = pointer.To(int32(v))
 	}
 
 	if v := d.Get("zone_redundant").(bool); v {
 		appServicePlan.ZoneRedundant = pointer.To(v)
+	}
+
+	if v := d.Get("async_scale_enabled").(bool); v {
+		appServicePlan.AsyncScaleEnabled = pointer.To(v)
 	}
 
 	if reserved {
@@ -301,6 +316,7 @@ func resourceAppServicePlanRead(d *pluginsdk.ResourceData, meta interface{}) err
 		d.Set("reserved", props.Reserved)
 		d.Set("is_xenon", props.IsXenon)
 		d.Set("zone_redundant", props.ZoneRedundant)
+		d.Set("async_scale_enabled", props.AsyncScaleEnabled)
 	}
 
 	if err := d.Set("sku", flattenAppServicePlanSku(resp.Sku)); err != nil {

@@ -129,6 +129,10 @@ The following arguments are supported:
 
 ~> **Note:** Requires either `PremiumV2` or `PremiumV3` SKU and that at least 3 instances. For more information, please see the [App Service Team Blog](https://azure.github.io/AppService/2021/08/25/App-service-support-for-availability-zones.html).
 
+* `async_scale_enabled` - (Optional) Whether to enable asynchronous scaling for the App Service Plan.
+
+~> **Note:** `async_scale_enabled` is not configurable for App Service Plans created in App Service Environments as they scale asynchronously by default.
+
 * `tags` - (Optional) A mapping of tags to assign to the resource.
 
 ---

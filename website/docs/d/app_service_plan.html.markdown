@@ -58,6 +58,8 @@ output "app_service_plan_id" {
 
 * `zone_redundant` - App Service Plan perform availability zone balancing.
 
+* `async_scale_enabled` - Whether asynchronous scaling is enabled for the App Service Plan.
+
 ---
 
 A `sku` block supports the following:

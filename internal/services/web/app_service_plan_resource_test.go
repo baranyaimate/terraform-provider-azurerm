@@ -238,6 +238,24 @@ func TestAccAppServicePlan_zoneRedundant(t *testing.T) {
 	})
 }
 
+func TestAccAppServicePlan_asyncScaleEnabled(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_app_service_plan", "test")
+	r := AppServicePlanResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.asyncScaleEnabled(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("async_scale_enabled").HasValue("true"),
+				check.That(data.ResourceName).Key("sku.0.tier").HasValue("PremiumV2"),
+				check.That(data.ResourceName).Key("sku.0.size").HasValue("P1v2"),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
 func (r AppServicePlanResource) Exists(ctx context.Context, clients *clients.Client, state *pluginsdk.InstanceState) (*bool, error) {
 	id, err := parse.AppServicePlanID(state.ID)
 	if err != nil {
@@ -623,6 +641,33 @@ resource "azurerm_app_service_plan" "test" {
     tier     = "PremiumV2"
     size     = "P1v2"
     capacity = 3
+  }
+}
+`, data.RandomInteger, data.Locations.Primary, data.RandomInteger)
+}
+
+func (r AppServicePlanResource) asyncScaleEnabled(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "test" {
+  name     = "acctestRG-%d"
+  location = "%s"
+}
+
+resource "azurerm_app_service_plan" "test" {
+  name                = "acctestASP-%d"
+  location            = azurerm_resource_group.test.location
+  resource_group_name = azurerm_resource_group.test.name
+  kind                = "Windows"
+
+  async_scale_enabled = true
+
+  sku {
+    tier = "PremiumV2"
+    size = "P1v2"
   }
 }
 `, data.RandomInteger, data.Locations.Primary, data.RandomInteger)

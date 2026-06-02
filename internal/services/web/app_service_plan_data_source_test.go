@@ -42,6 +42,7 @@ func TestAccAppServicePlanDataSource_complete(t *testing.T) {
 				acceptance.TestCheckResourceAttr(data.ResourceName, "sku.0.size", "S1"),
 				acceptance.TestCheckResourceAttr(data.ResourceName, "tags.%", "1"),
 				acceptance.TestCheckResourceAttr(data.ResourceName, "tags.environment", "Test"),
+				acceptance.TestCheckResourceAttr(data.ResourceName, "async_scale_enabled", "true"),
 			),
 		},
 	})
@@ -76,6 +77,23 @@ func TestAccAppServicePlanDataSource_basicWindowsContainer(t *testing.T) {
 				acceptance.TestCheckResourceAttr(data.ResourceName, "sku.0.tier", "PremiumV3"),
 				acceptance.TestCheckResourceAttr(data.ResourceName, "sku.0.size", "P1v3"),
 				acceptance.TestCheckResourceAttr(data.ResourceName, "is_xenon", "true"),
+			),
+		},
+	})
+}
+
+func TestAccAppServicePlanDataSource_asyncScaleEnabled(t *testing.T) {
+	data := acceptance.BuildTestData(t, "data.azurerm_app_service_plan", "test")
+
+	data.DataSourceTest(t, []acceptance.TestStep{
+		{
+			Config: AppServicePlanDataSource{}.asyncScaleEnabled(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				acceptance.TestCheckResourceAttr(data.ResourceName, "kind", "Windows"),
+				acceptance.TestCheckResourceAttr(data.ResourceName, "sku.#", "1"),
+				acceptance.TestCheckResourceAttr(data.ResourceName, "sku.0.tier", "Premium"),
+				acceptance.TestCheckResourceAttr(data.ResourceName, "sku.0.size", "P1V2"),
+				acceptance.TestCheckResourceAttr(data.ResourceName, "async_scale_enabled", "true"),
 			),
 		},
 	})
@@ -132,7 +150,8 @@ resource "azurerm_app_service_plan" "test" {
     size = "S1"
   }
 
-  per_site_scaling = true
+  per_site_scaling     = true
+  async_scale_enabled  = true
 
   tags = {
     environment = "Test"
@@ -205,6 +224,38 @@ resource "azurerm_app_service_plan" "test" {
     tier = "PremiumV3"
     size = "P1v3"
   }
+}
+
+data "azurerm_app_service_plan" "test" {
+  name                = azurerm_app_service_plan.test.name
+  resource_group_name = azurerm_app_service_plan.test.resource_group_name
+}
+`, data.RandomInteger, data.Locations.Primary, data.RandomInteger)
+}
+
+func (d AppServicePlanDataSource) asyncScaleEnabled(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "test" {
+  name     = "acctestRG-%d"
+  location = "%s"
+}
+
+resource "azurerm_app_service_plan" "test" {
+  name                = "acctestASP-%d"
+  location            = azurerm_resource_group.test.location
+  resource_group_name = azurerm_resource_group.test.name
+  kind                = "Windows"
+
+  sku {
+    tier = "Premium"
+    size = "P1V2"
+  }
+
+  async_scale_enabled = true
 }
 
 data "azurerm_app_service_plan" "test" {

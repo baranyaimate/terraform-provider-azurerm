@@ -98,6 +98,11 @@ func dataSourceAppServicePlan() *pluginsdk.Resource {
 				Computed: true,
 			},
 
+			"async_scale_enabled": {
+				Type:     pluginsdk.TypeBool,
+				Computed: true,
+			},
+
 			"tags": commonschema.TagsDataSource(),
 		},
 	}
@@ -145,6 +150,7 @@ func AppServicePlanDataSourceRead(d *pluginsdk.ResourceData, meta interface{}) e
 
 		d.Set("is_xenon", props.IsXenon)
 		d.Set("zone_redundant", props.ZoneRedundant)
+		d.Set("async_scale_enabled", props.AsyncScaleEnabled)
 	}
 
 	if err := d.Set("sku", flattenAppServicePlanSku(resp.Sku)); err != nil {
